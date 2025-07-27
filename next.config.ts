@@ -15,6 +15,11 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Experimental features for better module handling
+  experimental: {
+    esmExternals: 'loose',
+    serverComponentsExternalPackages: ['@apollo/client'],
+  },
   images: {
     remotePatterns: [
       // Allow all external domains - most efficient solution
@@ -23,6 +28,14 @@ const nextConfig: NextConfig = {
         hostname: '**',
       },
     ],
+  },
+  // Webpack configuration for better module resolution
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals = config.externals || [];
+      config.externals.push('@apollo/client');
+    }
+    return config;
   },
 };
 
