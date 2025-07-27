@@ -29,7 +29,7 @@ function createApolloClient() {
     ssrMode: isServer,
     link: new HttpLink({
       uri,
-      credentials: 'same-origin',
+      credentials: 'omit', // Changed from 'same-origin' to 'omit' for cross-origin requests
       fetch: isServer ? undefined : fetch,
     }),
     cache: new InMemoryCache(),

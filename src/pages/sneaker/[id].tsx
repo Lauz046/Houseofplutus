@@ -24,7 +24,22 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     console.log('🚀 Starting getServerSideProps for sneaker page');
     console.log('📝 Params:', context.params);
     
-    const apolloClient = initializeApollo();
+    // Initialize Apollo client with error handling
+    let apolloClient;
+    try {
+      apolloClient = initializeApollo();
+      console.log('✅ Apollo client initialized successfully');
+    } catch (apolloError) {
+      console.error('❌ Failed to initialize Apollo client:', apolloError);
+      return {
+        props: {
+          error: `Apollo client initialization failed: ${apolloError instanceof Error ? apolloError.message : 'Unknown error'}`,
+          productId: context.params?.id,
+          productType: 'sneaker',
+        },
+      };
+    }
+    
     const { id } = context.params!;
     
     // Debug environment variables
@@ -43,13 +58,34 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       console.log('✅ Apollo client connection test successful');
     } catch (testError) {
       console.error('❌ Apollo client connection test failed:', testError);
-      throw testError;
+      return {
+        props: {
+          error: `GraphQL connection failed: ${testError instanceof Error ? testError.message : 'Unknown error'}`,
+          productId: id,
+          productType: 'sneaker',
+        },
+      };
     }
     
-    const { data } = await apolloClient.query({
-      query: SNEAKER_QUERY,
-      variables: { id },
-    });
+    // Execute the actual query
+    let data;
+    try {
+      const result = await apolloClient.query({
+        query: SNEAKER_QUERY,
+        variables: { id },
+      });
+      data = result.data;
+      console.log('✅ GraphQL query executed successfully');
+    } catch (queryError) {
+      console.error('❌ GraphQL query failed:', queryError);
+      return {
+        props: {
+          error: `GraphQL query failed: ${queryError instanceof Error ? queryError.message : 'Unknown error'}`,
+          productId: id,
+          productType: 'sneaker',
+        },
+      };
+    }
 
     console.log('📦 Sneaker data received:', JSON.stringify(data, null, 2));
 
