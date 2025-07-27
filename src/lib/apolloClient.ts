@@ -11,9 +11,10 @@ function createApolloClient() {
   if (!uri) {
     // Fallback for different environments
     if (process.env.NODE_ENV === 'production') {
-      uri = 'https://testing-house.onrender.com/query';
+      // This will be set by Vercel environment variable
+      uri = 'https://plutus-backend.onrender.com/query';
     } else {
-      uri = 'https://testing-house.onrender.com/query';
+      uri = 'http://localhost:8090/query';
     }
   }
   
