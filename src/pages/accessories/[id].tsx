@@ -1,59 +1,161 @@
-import { GetServerSideProps } from 'next';
-import { initializeApollo } from '../../lib/apolloClient';
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
 import { ProductPage } from '../../components/ProductPage/ProductPage';
-import { gql } from '@apollo/client';
 
-const ACCESSORY_QUERY = gql`
-  query Accessory($id: ID!) {
-    accessory(id: $id) {
-      id
-      brand
-      productName
-      subcategory
-      gender
-      sizePrices { size price }
-      images
-      inStock
-      productLink
-      sellerName
-      sellerUrl
-    }
-  }
-`;
+export default function AccessoryProductPage() {
+  const router = useRouter();
+  const { id } = router.query;
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-export const getServerSideProps: GetServerSideProps = async (context) => {
-  const apolloClient = initializeApollo();
-  const { id } = context.params!;
-  
-  try {
-    const { data } = await apolloClient.query({
-      query: ACCESSORY_QUERY,
-      variables: { id },
-    });
+  useEffect(() => {
+    if (!id || typeof id !== 'string') return;
 
-    // If no product found, return 404
-    if (!data.accessory) {
-      return {
-        notFound: true,
-      };
-    }
+    const fetchProduct = async () => {
+      try {
+        console.log('🔍 Fetching accessory with ID:', id);
+        
+        const response = await fetch('https://houseofplutus.onrender.com/query', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: `
+              query Accessory($id: ID!) {
+                accessory(id: $id) {
+                  id
+                  brand
+                  productName
+                  subcategory
+                  gender
+                  sizePrices { size price }
+                  images
+                  inStock
+                  productLink
+                  sellerName
+                  sellerUrl
+                }
+              }
+            `,
+            variables: { id },
+          }),
+        });
 
-    return {
-      props: {
-        accessory: data.accessory,
-        productId: id,
-        productType: 'accessory',
-        initialApolloState: apolloClient.cache.extract(),
-      },
+        if (!response.ok) {
+          throw new Error(`GraphQL request failed with status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log('📦 Accessory data received:', result);
+
+        if (!result.data?.accessory) {
+          throw new Error('Product not found');
+        }
+
+        setProduct(result.data.accessory);
+      } catch (err) {
+        console.error('💥 Error fetching product:', err);
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setLoading(false);
+      }
     };
-  } catch (error) {
-    console.error('Error fetching accessory:', error);
-    return {
-      notFound: true,
-    };
-  }
-};
 
-export default function AccessoryProductSSRPage(props: any) {
-  return <ProductPage {...props} />;
+    fetchProduct();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div style={{ 
+        padding: '20px', 
+        textAlign: 'center', 
+        minHeight: '50vh', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        justifyContent: 'center', 
+        alignItems: 'center' 
+      }}>
+        <div style={{ fontSize: '1.2rem', color: '#666' }}>Loading product...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ 
+        padding: '20px', 
+        textAlign: 'center', 
+        minHeight: '50vh', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        justifyContent: 'center', 
+        alignItems: 'center' 
+      }}>
+        <h1 style={{ fontSize: '2rem', marginBottom: '1rem', color: '#333' }}>Product Not Found</h1>
+        <p style={{ fontSize: '1.1rem', color: '#666', marginBottom: '1rem' }}>
+          Sorry, the product you're looking for doesn't exist or has been removed.
+        </p>
+        <p style={{ fontSize: '0.9rem', color: '#999' }}>
+          Product ID: {id}
+        </p>
+        <p style={{ fontSize: '0.8rem', color: '#999', maxWidth: '600px', wordBreak: 'break-word' }}>
+          Error: {error}
+        </p>
+        <a 
+          href="/accessories" 
+          style={{ 
+            marginTop: '2rem', 
+            padding: '12px 24px', 
+            backgroundColor: '#007bff', 
+            color: 'white', 
+            textDecoration: 'none', 
+            borderRadius: '6px',
+            fontSize: '1rem'
+          }}
+        >
+          Browse All Accessories
+        </a>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div style={{ 
+        padding: '20px', 
+        textAlign: 'center', 
+        minHeight: '50vh', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        justifyContent: 'center', 
+        alignItems: 'center' 
+      }}>
+        <h1 style={{ fontSize: '2rem', marginBottom: '1rem', color: '#333' }}>Product Not Found</h1>
+        <p style={{ fontSize: '1.1rem', color: '#666', marginBottom: '1rem' }}>
+          Sorry, the product you're looking for doesn't exist or has been removed.
+        </p>
+        <p style={{ fontSize: '0.9rem', color: '#999' }}>
+          Product ID: {id}
+        </p>
+        <a 
+          href="/accessories" 
+          style={{ 
+            marginTop: '2rem', 
+            padding: '12px 24px', 
+            backgroundColor: '#007bff', 
+            color: 'white', 
+            textDecoration: 'none', 
+            borderRadius: '6px',
+            fontSize: '1rem'
+          }}
+        >
+          Browse All Accessories
+        </a>
+      </div>
+    );
+  }
+
+  return <ProductPage productId={typeof id === 'string' ? id : ''} productType="accessories" product={product} />;
 } 
