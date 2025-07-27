@@ -1,44 +1,10 @@
 import { GetServerSideProps } from 'next';
-import { initializeApollo } from '../../lib/apolloClient';
 import { ProductPage } from '../../components/ProductPage/ProductPage';
-import { gql } from '@apollo/client';
-
-const SNEAKER_QUERY = gql`
-  query Sneaker($id: ID!) {
-    sneaker(id: $id) {
-      id
-      brand
-      productName
-      sizePrices { size price }
-      images
-      soldOut
-      sellerName
-      sellerUrl
-      productLink
-    }
-  }
-`;
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
     console.log('🚀 Starting getServerSideProps for sneaker page');
     console.log('📝 Params:', context.params);
-    
-    // Initialize Apollo client with error handling
-    let apolloClient;
-    try {
-      apolloClient = initializeApollo();
-      console.log('✅ Apollo client initialized successfully');
-    } catch (apolloError) {
-      console.error('❌ Failed to initialize Apollo client:', apolloError);
-      return {
-        props: {
-          error: `Apollo client initialization failed: ${apolloError instanceof Error ? apolloError.message : 'Unknown error'}`,
-          productId: context.params?.id,
-          productType: 'sneaker',
-        },
-      };
-    }
     
     const { id } = context.params!;
     
@@ -50,47 +16,48 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     
     console.log('🔍 Fetching sneaker with ID:', id);
     
-    // Test the Apollo client connection first
-    try {
-      const testQuery = await apolloClient.query({
-        query: gql`{ __typename }`,
-      });
-      console.log('✅ Apollo client connection test successful');
-    } catch (testError) {
-      console.error('❌ Apollo client connection test failed:', testError);
-      return {
-        props: {
-          error: `GraphQL connection failed: ${testError instanceof Error ? testError.message : 'Unknown error'}`,
-          productId: id,
-          productType: 'sneaker',
-        },
-      };
-    }
-    
-    // Execute the actual query
-    let data;
-    try {
-      const result = await apolloClient.query({
-        query: SNEAKER_QUERY,
+    // Use fetch instead of Apollo client for SSR to avoid module issues
+    const response = await fetch('https://houseofplutus.onrender.com/query', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: `
+          query Sneaker($id: ID!) {
+            sneaker(id: $id) {
+              id
+              brand
+              productName
+              sizePrices { size price }
+              images
+              soldOut
+              sellerName
+              sellerUrl
+              productLink
+            }
+          }
+        `,
         variables: { id },
-      });
-      data = result.data;
-      console.log('✅ GraphQL query executed successfully');
-    } catch (queryError) {
-      console.error('❌ GraphQL query failed:', queryError);
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('❌ GraphQL request failed:', response.status);
       return {
         props: {
-          error: `GraphQL query failed: ${queryError instanceof Error ? queryError.message : 'Unknown error'}`,
+          error: `GraphQL request failed with status: ${response.status}`,
           productId: id,
           productType: 'sneaker',
         },
       };
     }
 
-    console.log('📦 Sneaker data received:', JSON.stringify(data, null, 2));
+    const result = await response.json();
+    console.log('📦 Sneaker data received:', JSON.stringify(result, null, 2));
 
     // If no product found, return 404
-    if (!data.sneaker) {
+    if (!result.data?.sneaker) {
       console.log('❌ No sneaker found for ID:', id);
       return {
         notFound: true,
@@ -100,23 +67,14 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     console.log('✅ Successfully processed sneaker data');
     return {
       props: {
-        sneaker: data.sneaker,
+        sneaker: result.data.sneaker,
         productId: id,
         productType: 'sneaker',
-        initialApolloState: apolloClient.cache.extract(),
       },
     };
   } catch (error) {
     console.error('💥 Error in getServerSideProps:', error);
     console.error('💥 Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-    
-    // Check if it's a "not found" error
-    if (error instanceof Error && error.message.includes('not found')) {
-      console.log('📝 Returning 404 for not found error');
-      return {
-        notFound: true,
-      };
-    }
     
     // Return a more graceful error response
     return {

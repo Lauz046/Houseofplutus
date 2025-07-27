@@ -45,11 +45,20 @@ function createApolloClient() {
 }
 
 export function initializeApollo(initialState: any = null) {
+  // For SSR, always create a new client
+  if (typeof window === 'undefined') {
+    const client = createApolloClient();
+    if (initialState) {
+      client.cache.restore(initialState);
+    }
+    return client;
+  }
+  
+  // For client-side, use singleton pattern
   const _apolloClient = apolloClient ?? createApolloClient();
   if (initialState) {
     _apolloClient.cache.restore(initialState);
   }
-  if (typeof window === 'undefined') return _apolloClient;
   if (!apolloClient) apolloClient = _apolloClient;
   return _apolloClient;
 }
