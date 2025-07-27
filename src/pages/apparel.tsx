@@ -76,29 +76,30 @@ const ApparelPage = () => {
     const gp = router.query.gender;
     if (gp && selectedGenders.length === 0) {
       const raw = Array.isArray(gp) ? gp[0] : gp;
-      if (typeof raw === 'string' && raw.trim() !== '') {
-        const lower = raw.toLowerCase();
-        let normalized = raw.toUpperCase(); // fallback
-        if (['male', 'men', 'him', 'boy', 'gent', 'gents'].includes(lower)) {
-          normalized = 'MALE';
-        } else if (['female', 'women', 'her', 'girl', 'lady', 'ladies'].includes(lower)) {
-          normalized = 'FEMALE';
-        }
-        setSelectedGenders([normalized]);
+      const gender = raw === 'men' ? 'Men' : raw === 'women' ? 'Women' : raw === 'unisex' ? 'Unisex' : raw;
+      if (gender && ['Men', 'Women', 'Unisex'].includes(gender)) {
+        setSelectedGenders([gender]);
       }
     }
-    // We only want to run this once when router is ready.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router.isReady]);
+  }, [router.isReady, router.query.gender, selectedGenders.length]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const checkMobile = () => setIsMobile(window.innerWidth < 900);
+      const checkMobile = () => {
+        const mobile = window.innerWidth < 900;
+        setIsMobile(mobile);
+        // Set initial filter state based on screen size
+        if (mobile && showFilter) {
+          setShowFilter(false); // Close filter on mobile by default
+        } else if (!mobile && !showFilter) {
+          setShowFilter(true); // Open filter on desktop by default
+        }
+      };
       checkMobile();
       window.addEventListener('resize', checkMobile);
       return () => window.removeEventListener('resize', checkMobile);
     }
-  }, []);
+  }, [showFilter]);
 
   // Fetch brands, subcategories, and genders
   const { data: brandsData } = useQuery(ALL_APPAREL_BRANDS);

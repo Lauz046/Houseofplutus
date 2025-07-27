@@ -66,12 +66,21 @@ const AccessoriesPage = () => {
   
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const checkMobile = () => setIsMobile(window.innerWidth < 900);
+      const checkMobile = () => {
+        const mobile = window.innerWidth < 900;
+        setIsMobile(mobile);
+        // Set initial filter state based on screen size
+        if (mobile && showFilter) {
+          setShowFilter(false); // Close filter on mobile by default
+        } else if (!mobile && !showFilter) {
+          setShowFilter(true); // Open filter on desktop by default
+        }
+      };
       checkMobile();
       window.addEventListener('resize', checkMobile);
       return () => window.removeEventListener('resize', checkMobile);
     }
-  }, []);
+  }, [showFilter]);
 
   // Fetch brands, subcategories, and genders
   const { data: brandsData } = useQuery(ALL_ACCESSORY_BRANDS);
