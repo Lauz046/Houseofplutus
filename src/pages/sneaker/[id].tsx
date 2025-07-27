@@ -58,6 +58,13 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   } catch (error) {
     console.error('Error in getServerSideProps:', error);
     
+    // Check if it's a "not found" error
+    if (error instanceof Error && error.message.includes('not found')) {
+      return {
+        notFound: true,
+      };
+    }
+    
     // Return a more graceful error response
     return {
       props: {
@@ -74,10 +81,28 @@ export default function SneakerProductSSRPage(props: any) {
   if (props.error) {
     console.error('SSR Error:', props.error);
     return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <h1>Error Loading Product</h1>
-        <p>{props.error}</p>
-        <p>Product ID: {props.productId}</p>
+      <div style={{ padding: '20px', textAlign: 'center', minHeight: '50vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+        <h1 style={{ fontSize: '2rem', marginBottom: '1rem', color: '#333' }}>Product Not Found</h1>
+        <p style={{ fontSize: '1.1rem', color: '#666', marginBottom: '1rem' }}>
+          Sorry, the product you're looking for doesn't exist or has been removed.
+        </p>
+        <p style={{ fontSize: '0.9rem', color: '#999' }}>
+          Product ID: {props.productId}
+        </p>
+        <a 
+          href="/sneaker" 
+          style={{ 
+            marginTop: '2rem', 
+            padding: '12px 24px', 
+            backgroundColor: '#007bff', 
+            color: 'white', 
+            textDecoration: 'none', 
+            borderRadius: '6px',
+            fontSize: '1rem'
+          }}
+        >
+          Browse All Sneakers
+        </a>
       </div>
     );
   }
